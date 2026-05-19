@@ -1,0 +1,43 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Player {
+  id            Int     @id @default(autoincrement())
+  username      String  @unique
+  budget        Float   @default(1000.0)
+  currentCityId Int
+  currentCity   City    @relation(fields: [currentCityId], references: [id])
+}
+
+model City {
+  id            Int      @id @default(autoincrement())
+  name          String
+  lat           Float
+  lng           Float
+  routesFrom    Route[]  @relation("FromCity")
+  routesTo      Route[]  @relation("ToCity")
+  playersHere   Player[]
+}
+
+model Route {
+  id             Int    @id @default(autoincrement())
+  fromCityId     Int
+  toCityId       Int
+  transportType  String 
+  baseCost       Float
+  baseDuration   Int    
+  
+  fromCity       City   @relation("FromCity", fields: [fromCityId], references: [id])
+  toCity         City   @relation("ToCity", fields: [toCityId], references: [id])
+}
