@@ -32,13 +32,20 @@ app.get('/api/player/:id', async (req, res) => {
 });
 
 app.post('/api/travel', async (req, res) => {
-  const { playerId, toCityId, cost } = req.body;
+  const { playerId, toCityId, cost, routeId } = req.body;
 
   try {
     const player = await prisma.player.findUnique({ where: { id: playerId } });
-    
     if (!player) return res.status(404).json({ error: "Player not found" });
     if (player.budget < cost) return res.status(400).json({ error: "Insufficient funds!" });
+
+    const route = await prisma.route.findUnique({ where: { id: routeId } });
+    if (!route) return res.status(404).json({ error: "Route not found" });
+
+    const baseDuration = route.baseDuration;
+    const maxVariance = Math.max(0.05, 0.3 - (baseDuration / 1000));
+    const variance = (Math.random() * maxVariance * 2) - maxVariance;
+    const actualDuration = Math.round(baseDuration * (1 + variance));
 
     const updatedPlayer = await prisma.player.update({
       where: { id: playerId },
@@ -48,9 +55,29 @@ app.post('/api/travel', async (req, res) => {
       }
     });
 
-    res.json({ success: true, player: updatedPlayer });
+    res.json({
+      success: true,
+      player: updatedPlayer,
+      actualDuration: actualDuration
+    });
   } catch (error) {
     res.status(500).json({ error: "Travel execution error" });
+  }
+});
+
+app.post('/api/reset', async (req, res) => {
+  const { playerId } = req.body;
+  try {
+    const updatedPlayer = await prisma.player.update({
+      where: { id: playerId },
+      data: {
+        budget: 1000.0,
+        currentCityId: 1
+      }
+    });
+    res.json({ success: true, player: updatedPlayer });
+  } catch (error) {
+    res.status(500).json({ error: "Reset error" });
   }
 });
 
